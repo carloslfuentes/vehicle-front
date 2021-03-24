@@ -28,7 +28,6 @@ const VehicleCreate = (props) => {
   }
 
   const addParams = (key, value) => {
-    console.log(key, value);
     if(value === undefined){
       value='';
     }
