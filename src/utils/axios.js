@@ -35,6 +35,5 @@ const request = ({ method, url, data, params, headers }) => {
       return response.data;
     })
     .catch(error => {
-
     });
 };
