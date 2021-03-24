@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import VehiclesList from './VehiclesList';
+import VehiclesList from './component/VehiclesList';
 
 function App() {
 

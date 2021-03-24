@@ -3,9 +3,10 @@ import { DataGrid } from '@material-ui/data-grid';
 import { TextField, Button } from '@material-ui/core';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import { makeStyles } from '@material-ui/core/styles';
-import { fetchVehicles, getVeicles, postVeicles } from './services/vehicles'
-import { fetchVehiclesModel, getVehiclesModel } from './services/vehicle_models'
-import { fetchVehiclesBrand } from './services/vehicle_brands'
+import { fetchVehicles, getVeicles, postVeicles } from '../services/vehicles'
+import { fetchVehiclesModel, getVehiclesModel } from '../services/vehicle_models'
+import { fetchVehiclesBrand } from '../services/vehicle_brands'
+import SaveIcon from '@material-ui/icons/Save';
 
 
 class VehiclesList extends React.Component {
@@ -151,11 +152,12 @@ class VehiclesList extends React.Component {
         <div style={{ width: '60%' }}>
 
           <form noValidate autoComplete="off" >
-            <Button variant="contained" color="primary" onClick={() => this.setState({showNew: !this.state.showNew})}>
-              Add Veicle
+            <Button variant="contained" color="default" onClick={() => this.setState({showNew: !this.state.showNew})}>
+              Add Vehicle
             </Button>
             <div style={this.state.showNew ? {} : { display: 'none' }}>
                 <Autocomplete
+                  loading={true}
                   id="brand_name" options={this.state.brands} getOptionLabel={(option) => option.name} style={{ width: 150, float: 'left' }}
                   onChange={(event, newValue) => {
                     this.handleChange2('brand', newValue?.name);
@@ -177,7 +179,7 @@ class VehiclesList extends React.Component {
                 <TextField id="price" label="Price" value={ this.state.params.price } name="price" onChange={this.handleChange} />
               </div>
               <div style={{ marginTop: '18px' }}>
-                <Button variant="contained" color="primary" onClick={() => this.saveData()}>
+                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={() => this.saveData()} style={{ backgroundColor: '#00c72b' }}>
                   Create
                 </Button>
               </div>
