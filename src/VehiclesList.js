@@ -1,19 +1,12 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { DataGrid } from '@material-ui/data-grid';
-import { InputLabel, TextField, Button, Modal } from '@material-ui/core';
+import { TextField, Button } from '@material-ui/core';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 import { makeStyles } from '@material-ui/core/styles';
+import { fetchVehicles, getVeicles, postVeicles } from './services/vehicles'
+import { fetchVehiclesModel, getVehiclesModel } from './services/vehicle_models'
+import { fetchVehiclesBrand } from './services/vehicle_brands'
 
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    '& .MuiTextField-root': {
-      margin: theme.spacing(1),
-      width: 200,
-    },
-  },
-}));
 
 class VehiclesList extends React.Component {
 
@@ -32,25 +25,55 @@ class VehiclesList extends React.Component {
       mileage: '',
       year: '',
       price: ''
-    }
-
+    },
+    showNew: false,
+    brands: [],
+    models: [],
+    fetchModels: [],
+    loading: true
   }
-
 
   componentDidMount() {
     this.saveData = this.saveData.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.filterData = this.filterData.bind(this);
     this.filterChange = this.filterChange.bind(this);
+    this.filterModels = this.filterModels.bind(this);
+    this.loading(true);
     this.getData();
+    this.getBrand();
+    this.getModel();
+  }
+
+  loading(val=false){
+      this.setState({ loading: val });
+
   }
 
   getData(query=''){
-    axios.get(`http://localhost:3000/api/v1/vehicles${query}`)
-      .then(res => {
-        const vehicles = res.data;
-        this.setState({ vehicles: vehicles });
-      })
+    fetchVehicles().then(res => {
+      this.setState({ vehicles: res });
+      this.loading(false);
+    });
+  }
+
+  getBrand(){
+    fetchVehiclesBrand().then(res => {
+      this.setState({ brands: res });
+    });
+  }
+
+  getModel(){
+    fetchVehiclesModel().then(res => {
+      this.setState({ fetchModels: res });
+    });
+  }
+
+  filterModels(brand){
+    let search = `?brand_name=${brand}`;
+    getVehiclesModel(search).then(res => {
+      this.setState({ models: res });
+    });
   }
 
   handleChange(event) {
@@ -59,20 +82,43 @@ class VehiclesList extends React.Component {
     this.setState({ params: params });
   }
 
+  handleChange2(key, value) {
+    if(value === undefined){
+      value='';
+    }
+    let params = this.state.params;
+    params[key] = value;
+    this.setState({ params: params });
+    if(key === 'brand'){
+      this.filterModels(value);
+    }
+  }
+
+  filterChange2(key, value) {
+    this.loading(true);
+    if(value === undefined){
+      value='';
+    }
+    let filter = this.state.filter;
+    filter[key] = value;
+    this.setState({ filter: filter });
+    this.filterData();
+  }
+
   filterChange(event) {
+    this.loading(true);
     let filter = this.state.filter;
     filter[event.target.name] = event.target.value;
     this.setState({ filter: filter });
+    this.filterData();
   }
-
 
   saveData() {
     let params = this.state.params;
     this.clear();
-    axios.post(`http://localhost:3000/api/v1/vehicles`, params )
-      .then(res => {
-        this.getData();
-      })
+    postVeicles(params).then(res => {
+      this.getData();
+    });
   }
 
   filterData() {
@@ -85,8 +131,10 @@ class VehiclesList extends React.Component {
         }
       }
     )
-    this.getData(search);
-    console.log(search);
+    getVeicles(search).then(res => {
+      this.setState({ vehicles: res });
+      this.loading(false);
+    });
   }
 
   getDefaultState() {
@@ -99,33 +147,60 @@ class VehiclesList extends React.Component {
 
   render() {
     return (
-      <div>
-        <div style={{ height: 350, width: '60%' }}>
+      <div style={{ marginTop: '20px', marginLeft: '420px'}}>
+        <div style={{ width: '60%' }}>
 
-          <form noValidate autoComplete="off">
-            <div>
-              <TextField id="model_name" label="Model" value={ this.state.params.model } name="model" onChange={this.handleChange}/>
-              <TextField id="brand_name" label="Brand" value={ this.state.params.brand } name="brand" onChange={this.handleChange}/>
-            </div>
-            <div>
-              <TextField id="year" label="year" value={ this.state.params.year } name="year" onChange={this.handleChange}/>
-              <TextField id="mileage" label="Mileage" value={ this.state.params.mileage } name="mileage" onChange={this.handleChange} />
-            </div>
-            <div>
-              <TextField id="price" label="Price" value={ this.state.params.price } name="price" onChange={this.handleChange} />
-            </div>
-            <div style={{ marginTop: '18px' }}>
-              <Button variant="contained" color="primary" onClick={() => this.saveData()}>
-                Save
-              </Button>
+          <form noValidate autoComplete="off" >
+            <Button variant="contained" color="primary" onClick={() => this.setState({showNew: !this.state.showNew})}>
+              Add Veicle
+            </Button>
+            <div style={this.state.showNew ? {} : { display: 'none' }}>
+                <Autocomplete
+                  id="brand_name" options={this.state.brands} getOptionLabel={(option) => option.name} style={{ width: 150, float: 'left' }}
+                  onChange={(event, newValue) => {
+                    this.handleChange2('brand', newValue?.name);
+                  }}
+                  renderInput={(params) => <TextField {...params} label="Brand" />}
+                />
+                <Autocomplete
+                  id="model_name" options={this.state.models} getOptionLabel={(option) => option.name} style={{ width: 150, float: 'left' }}
+                  onChange={(event, newValue) => {
+                    this.handleChange2('model', newValue?.name);
+                  }}
+                  renderInput={(params) => <TextField {...params} label="Model" />}
+                />
+              <div style={{ float: 'left' }}>
+                <TextField id="year" label="Year" value={ this.state.params.year } name="year" onChange={this.handleChange}/>
+                <TextField id="mileage" label="Mileage" value={ this.state.params.mileage } name="mileage" onChange={this.handleChange} />
+              </div>
+              <div>
+                <TextField id="price" label="Price" value={ this.state.params.price } name="price" onChange={this.handleChange} />
+              </div>
+              <div style={{ marginTop: '18px' }}>
+                <Button variant="contained" color="primary" onClick={() => this.saveData()}>
+                  Create
+                </Button>
+              </div>
             </div>
           </form>
 
-          <div>
+          <div >
             <div>
-              <TextField id="model_filter" label="Model"  name="model_name" onChange={this.filterChange}/>
+              <Autocomplete
+                id="brand_filter" options={this.state.brands} getOptionLabel={(option) => option.name} style={{ width: 150, float: 'left' }}
+                onChange={(event, newValue) => {
+                  this.filterChange2('brand_name', newValue?.name);
+                }}
+                renderInput={(params) => <TextField {...params} label="Brand" />}
+              />
 
-              <TextField id="brand_filter" label="Brand"  name="brand_name" onChange={this.filterChange}/>
+              <Autocomplete
+                id="model_filter" options={this.state.fetchModels} getOptionLabel={(option) => option.name} style={{ width: 150, float: 'left' }}
+                onChange={(event, newValue) => {
+                  this.filterChange2('model_name', newValue?.name);
+                }}
+                renderInput={(params) => <TextField {...params} label="Model" />}
+              />
 
               <TextField id="year_filter" label="Year"  name="year" onChange={this.filterChange}/>
 
@@ -133,18 +208,14 @@ class VehiclesList extends React.Component {
 
               <TextField id="price_filter" label="Price"  name="price" onChange={this.filterChange}/>
             </div>
-            <div style={{ marginTop: '18px' }}>
-              <Button variant="contained" color="primary" onClick={() => this.filterData()}>
-                Search
-              </Button>
-            </div>
 
           </div>
 
         </div>
-        <div style={{ height: 550, width: '60%' }}>
+        <div style={{ height: 550, width: '60%', marginTop: '20px' }}>
           <DataGrid
-            columns={[{ field: 'id' }, { field: 'model_name' }, { field: 'brand_name' }, { field: 'year' }, { field: 'mileage' }, { field: 'price' }]}
+            loading={this.state.loading}
+            columns={[{ field: 'id', width: 80 }, { field: 'model_name', headerName: 'Model', width: 160 }, { field: 'brand_name', headerName: 'Brand', width: 160  }, { field: 'year', headerName: 'Year', width: 110  }, { field: 'mileage', headerName: 'Mileage', width: 150  }, { field: 'price', headerName: 'Price', width: 100  }]}
             rows={ this.state.vehicles }
           />
         </div>
